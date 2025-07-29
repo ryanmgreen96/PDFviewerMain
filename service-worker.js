@@ -1,8 +1,4 @@
-
-
-
-
-const CACHE_NAME = "pdf-cache-v3"; // Update version if caching doesn't refresh
+const CACHE_NAME = "pdf-cache-v" + new Date().getTime(); // [1] dynamic versioning
 
 const FILES_TO_CACHE = [
   "/PDFviewerMain/",
@@ -14,8 +10,8 @@ const FILES_TO_CACHE = [
   "/PDFviewerMain/fall24.html",
   "/PDFviewerMain/winter24.html",
   "/PDFviewerMain/service-worker.js",
+  "/PDFviewerMain/spring25.html",
 ];
-
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -25,27 +21,53 @@ self.addEventListener("install", (event) => {
       });
     })
   );
+  self.skipWaiting(); // [2] activate new SW immediately
 });
 
-
-self.addEventListener('activate', event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(keys => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        keys.map(key => {
+        keys.map((key) => {
           if (key !== CACHE_NAME) {
-            return caches.delete(key); // Delete old versions
+            return caches.delete(key); // delete old versions
           }
         })
       );
     })
   );
+  self.clients.claim(); // [3] take control immediately
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
-  );
+// [4] fetch handler - bypass cache for HTML, JS, CSS
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  if (req.method !== "GET") return;
+
+  const isHTML = req.headers.get("accept")?.includes("text/html");
+  const isJSorCSS = req.destination === "script" || req.destination === "style";
+
+  if (isHTML || isJSorCSS) {
+    event.respondWith(
+      fetch(req)
+        .then((response) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(req, response.clone());
+            return response;
+          });
+        })
+        .catch(() => caches.match(req))
+    );
+  } else {
+    event.respondWith(caches.match(req).then((res) => res || fetch(req)));
+  }
+});
+
+// [6] respond to skipWaiting trigger from page
+self.addEventListener("message", (event) => {
+  if (event.data?.action === "skipWaiting") {
+    self.skipWaiting();
+  }
 });
