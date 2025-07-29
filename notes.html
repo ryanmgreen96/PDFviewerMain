@@ -1,0 +1,204 @@
+<script>
+    $(function () {
+        const savedBg = localStorage.getItem("bgColor");
+        if (savedBg) $("body").css("background-color", savedBg);
+
+        const scrollY = localStorage.getItem("scrollY");
+        if (scrollY) $(window).scrollTop(scrollY);
+
+        let bookmarkedId = localStorage.getItem("bookmarkId");
+
+        $(".text-piece").each(function () {
+            const id = $(this).data("id");
+            const title = localStorage.getItem(id + "_title");
+            const cat = localStorage.getItem(id + "_cat");
+            if (title) $(this).find(".title-display").text(title);
+            if (cat) $(this).attr("data-category", cat);
+            if (id === bookmarkedId) {
+                $(this).find(".bookmark-box").prop("checked", true);
+            }
+
+        });
+
+        $(".color-picker button").on("click", function () {
+            const color = $(this).data("color");
+            $("body").css("background-color", color);
+            localStorage.setItem("bgColor", color);
+
+            if (color.toLowerCase() === "#ffffff" || color.toLowerCase() === "white") {
+                $("body").css("color", "black");                // body text black
+                $(".title-display").css("color", "black");      // title-display black
+            } else {
+                const lightTextColor = "#fff";                   // white or light color for title-display on dark bg
+                const bodyTextColor = "hsl(38, 72%, 75%)";       // your default gold-ish color for body text
+
+                $("body").css("color", bodyTextColor);           // body text color
+                $(".title-display").css("color", lightTextColor);// title-display light text on colored bg
+            }
+        });
+
+
+
+        let activeFilters = [];
+
+        $(".filter-btn").on("click", function () {
+            const category = $(this).data("filter");
+
+            $(this).toggleClass("active");
+
+            if ($(this).hasClass("active")) {
+                activeFilters.push(category);
+            } else {
+                activeFilters = activeFilters.filter(c => c !== category);
+            }
+
+            filterBySelectedCategories();
+        });
+
+        $("#filter-clear").on("click", function () {
+            activeFilters = [];
+            $(".filter-btn").removeClass("active");
+            $(".text-piece").show();
+        });
+
+        function filterBySelectedCategories() {
+            $(".text-piece").each(function () {
+                const pieceCategories = ($(this).attr("data-category") || "").split(",");
+                const matchAll = activeFilters.every(c => pieceCategories.includes(c));
+                $(this).toggle(matchAll);
+            });
+        }
+
+
+        let currentPiece = null;
+        $(document).on("click", ".edit-btn", function () {
+            currentPiece = $(this).closest(".text-piece");
+            const id = currentPiece.data("id");
+            const title = localStorage.getItem(id + "_title") || "";
+            const cats = (localStorage.getItem(id + "_cat") || "").split(",");
+            $("#modal-title").val(title);
+            $("#modal-category input").prop("checked", false);
+            cats.forEach(c => {
+                $("#modal-category input[value='" + c + "']").prop("checked", true);
+            });
+
+            $(".overlay, .modal").show();
+        });
+
+        $("#cancel-meta").on("click", function () {
+            $(".overlay, .modal").hide();
+        });
+
+        $("#save-meta").on("click", function () {
+            const title = $("#modal-title").val();
+            const cats = [];
+            $("#modal-category input:checked").each(function () {
+                cats.push($(this).val());
+            });
+            const catStr = cats.join(",");
+            const id = currentPiece.data("id");
+            const encodedTitle = title.replace(/\n/g, "<br>");
+            currentPiece.find(".title-display").text(title);
+
+
+            currentPiece.attr("data-category", catStr);
+            localStorage.setItem(id + "_title", title);
+            localStorage.setItem(id + "_cat", catStr);
+            $(".overlay, .modal").hide();
+        });
+
+        $(".bookmark-box").on("change", function () {
+            $(".bookmark-box").not(this).prop("checked", false);
+            if ($(this).is(":checked")) {
+                const id = $(this).closest(".text-piece").data("id");
+                localStorage.setItem("bookmarkId", id);
+            } else {
+                localStorage.removeItem("bookmarkId");
+            }
+        });
+        let showingBookmark = false;
+
+        $("#show-bookmarked").on("click", function () {
+            const bookmarkedId = localStorage.getItem("bookmarkId");
+            if (bookmarkedId) {
+                const $target = $(`.text-piece[data-id='${bookmarkedId}']`);
+                const $bookmark = $target.find(".bookmark-box");
+
+                if ($bookmark.length) {
+                    $('html, body').animate({
+                        scrollTop: $bookmark.offset().top - 40  // buffer above checkbox
+                    }, 500);
+                } else if ($target.length) {
+                    $('html, body').animate({
+                        scrollTop: $target.offset().top
+                    }, 500);
+                } else {
+                    alert("Bookmarked piece not found on this page.");
+                }
+            } else {
+                alert("No piece bookmarked yet.");
+            }
+        });
+
+        $(window).on("beforeunload", function () {
+            localStorage.setItem("scrollY", window.scrollY);
+        });
+    });
+    $(function () {
+        function updateEditButtons() {
+            const scrollTop = $(window).scrollTop();
+            const windowHeight = $(window).height();
+
+            $('div#content').each(function () {
+                const $content = $(this);
+                const $piece = $content.find('.text-piece');
+                const $btn = $piece.find('.edit-btn');
+
+                if ($piece.length === 0 || $btn.length === 0) return;
+
+                const pieceTop = $piece.offset().top;
+                const pieceBottom = pieceTop + $piece.outerHeight();
+
+                // If any part of the piece is visible
+                if (pieceBottom > scrollTop && pieceTop < scrollTop + windowHeight) {
+                    let centerY = scrollTop + windowHeight / 2;
+
+                    // Clamp centerY within piece bounds with 20px margin
+                    centerY = Math.max(centerY, pieceTop + 20);
+                    centerY = Math.min(centerY, pieceBottom - 20);
+
+                    const btnTop = centerY - pieceTop;
+
+                    $btn.css({
+                        top: btnTop + 'px',
+                        opacity: 1,
+                        pointerEvents: 'auto'
+                    });
+                } else {
+                    $btn.css({
+                        opacity: 0,
+                        pointerEvents: 'none'
+                    });
+                }
+            });
+        }
+
+        $(window).on('scroll resize', updateEditButtons);
+        updateEditButtons();
+
+        // Example: handle edit button clicks
+
+    });
+    function autoResizeTextarea(el) {
+        el.style.height = "auto"; // reset height
+        el.style.height = (el.scrollHeight) + "px"; // adjust height to content
+    }
+
+    $("#modal-title").on("input", function () {
+        autoResizeTextarea(this);
+    });
+
+
+
+
+</script>
