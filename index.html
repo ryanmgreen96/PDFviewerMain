@@ -192,11 +192,14 @@
         <!-- <button class="filter-btn" data-filter="World">Wrld</button>
         <button class="filter-btn" data-filter="Principle">Prncpl</button> -->
         <button class="filter-btn" data-filter="joy">Joy</button>
-        <button class="filter-btn" data-filter="Reflection">Reflection</button>
-        <button class="filter-btn" data-filter="Work">Work</button>
+        <button class="filter-btn" data-filter="Reflection">Refltn</button>
+        <button class="filter-btn" data-filter="play">Play</button>
+        <button class="filter-btn" data-filter="Work">Wrk</button>
         <button class="filter-btn" data-filter="Grub">Grub</button>
         <!-- <button class="filter-btn" data-filter="Civ">Civ</button> -->
         <button id="filter-clear"></button>
+        <button id="filter-uncategorized">//</button>
+
     </div>
     <div id="section-toc" style="text-align:center; margin-bottom: 1em;">
         <button data-section="fall24.html">Fall 2024</button>
@@ -224,6 +227,7 @@
                 <label><input type="checkbox" value="Principle"> Principle</label><br> -->
                 <label><input type="checkbox" value="joy"> Joy</label> <br>
                 <label><input type="checkbox" value="Reflection"> Reflction</label><br><br>
+                <label><input type="checkbox" value="play"> Play</label><br>
                 <label><input type="checkbox" value="Grub"> Grub</label><br>
                 <label><input type="checkbox" value="Work"> Work</label><br>
 
@@ -461,6 +465,14 @@ function initializeLoadedContent() {
             $(".filter-btn").removeClass("active");
             $("#content-container .text-piece").show();
         });
+        $("#filter-uncategorized").on("click", function () {
+            $(".filter-btn").removeClass("active");
+            $("#content-container .text-piece").each(function () {
+                const cat = $(this).attr("data-category") || "";
+                $(this).toggle(cat.trim() === "");
+            });
+        });
+
 
         $("#section-toc button").on("click", function () {
             const file = $(this).data("section");
