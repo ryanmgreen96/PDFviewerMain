@@ -111,7 +111,7 @@
 
         .edit-btn {
             position: absolute;
-            right: 0px;
+            left: -10px;
             top: 50%;
             /* default, will be overridden by JS */
             transform: translateY(-50%);
@@ -232,6 +232,8 @@
         </label><br><br>
 
         <button id="cancel-meta">Cancel</button>
+        <button id="go-home">Home</button>
+
     </div>
   
 <script>
@@ -476,6 +478,10 @@ function initializeLoadedContent() {
             this.style.height = "auto";
             this.style.height = (this.scrollHeight) + "px";
         });
+        $("#go-home").on("click", function () {
+            $('html, body').animate({ scrollTop: 0 }, 500);
+        });
+
     });
 </script>
 
